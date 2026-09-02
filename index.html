@@ -1,8 +1,9 @@
 <!DOCTYPE html>
-<html>
+<html lang="vi">
 <head>
-<base target="_top">
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Đăng ký ca làm việc</title>
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 <style>
   :root{
@@ -20,7 +21,6 @@
   }
   .wrap{max-width:520px;margin:0 auto;padding:0 16px 120px}
 
-  /* ---- màn hình khởi động ---- */
   #loading{min-height:100vh;display:flex;flex-direction:column;
            align-items:center;justify-content:center;padding:24px;gap:14px}
   .spin{width:26px;height:26px;border:3px solid var(--line);border-top-color:var(--green);
@@ -36,19 +36,16 @@
   #hint{max-width:520px;font-size:13px;color:var(--warn);background:var(--warn-bg);
         border-radius:9px;padding:11px 13px;display:none;line-height:1.55}
 
-  /* ---- header ---- */
   header{padding:20px 0 12px}
   h1{margin:0;font-size:19px;font-weight:700;letter-spacing:-.2px}
   .who{font-size:13px;color:var(--muted);margin-top:3px}
 
-  /* ---- tabs ---- */
   .tabs{display:flex;gap:4px;background:#F3F4F6;padding:4px;border-radius:10px;margin:14px 0 18px}
   .tab{flex:1;text-align:center;padding:9px 4px;border-radius:7px;font-size:14px;
        font-weight:600;color:var(--muted);cursor:pointer;transition:.15s;border:none;
        background:none;font-family:inherit}
   .tab.on{background:#fff;color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.08)}
 
-  /* ---- ô nhập ---- */
   label.fld{display:block;font-size:13px;font-weight:600;color:var(--muted);
             margin:0 0 7px;text-transform:uppercase;letter-spacing:.4px}
   input[type=date],textarea{
@@ -59,7 +56,6 @@
   textarea{resize:none;min-height:84px;line-height:1.5}
   .sec{margin-bottom:22px}
 
-  /* ---- danh sách ca ---- */
   .bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:9px}
   .cnt{font-size:13px;color:var(--muted)}
   .cnt b{color:var(--green-dark)}
@@ -81,7 +77,6 @@
   .nm{font-weight:600;font-size:15px}
   .tm{font-size:13px;color:var(--muted);margin-left:auto}
 
-  /* ---- nút gửi ---- */
   .foot{
     position:fixed;left:0;right:0;bottom:0;background:#fff;
     border-top:1px solid var(--line);padding:12px 16px calc(12px + env(safe-area-inset-bottom));
@@ -94,7 +89,6 @@
   .btn:disabled{background:#D1D5DB;cursor:not-allowed}
   .btn:active:not(:disabled){background:var(--green-dark)}
 
-  /* ---- lịch sử ---- */
   .card{border:1.5px solid var(--line);border-radius:11px;padding:14px;margin-bottom:11px}
   .card h3{margin:0 0 3px;font-size:15px;font-weight:700}
   .card .rid{font-size:12px;color:var(--muted);margin-bottom:10px}
@@ -106,7 +100,6 @@
   .note{font-size:12px;color:var(--muted);margin-top:6px;padding-left:2px}
   .empty{text-align:center;color:var(--muted);padding:52px 20px;font-size:14px}
 
-  /* ---- màn hình xong ---- */
   #done{display:none;text-align:center;padding:70px 24px}
   .tick{width:64px;height:64px;margin:0 auto 20px;border-radius:50%;
         background:var(--green-soft);display:flex;align-items:center;justify-content:center}
@@ -122,7 +115,6 @@
 </head>
 <body>
 
-<!-- ===== KHỞI ĐỘNG / CHẨN ĐOÁN ===== -->
 <div id="loading">
   <div class="spin" id="spin"></div>
   <div id="loadTxt">Đang kết nối LINE…</div>
@@ -130,7 +122,6 @@
   <div id="diag" class="hide"></div>
 </div>
 
-<!-- ===== ỨNG DỤNG ===== -->
 <div id="app" class="hide">
   <div class="wrap">
     <header>
@@ -177,7 +168,6 @@
   </div>
 </div>
 
-<!-- ===== HOÀN TẤT ===== -->
 <div id="done">
   <div class="tick">
     <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#06C755" stroke-width="3"
@@ -191,9 +181,12 @@
 
 <script>
 /* ============================================================
-   Đặt DEBUG = false sau khi mọi thứ chạy ổn định.
-   Khi bật, màn hình khởi động sẽ liệt kê từng bước kèm ✓ / ✗.
+   ⚠️ DÁN URL /exec CỦA APPS SCRIPT VÀO ĐÂY
+   Lấy tại: Apps Script > Deploy > Manage deployments > Web app URL
    ============================================================ */
+var GAS_URL = "https://script.google.com/macros/s/AKfycbywXomnFnY8H7vtyWSW5Jg27Cdr5yBaRkUBVkMtjuk/dev";
+
+// Đặt false khi mọi thứ đã chạy ổn
 var DEBUG = true;
 
 var LIFF_ID  = null;
@@ -208,19 +201,50 @@ var histLoaded = false;
 
 function $(id) { return document.getElementById(id); }
 
+/* ==================== GỌI API ==================== */
+/**
+ * Thử POST trước (nhanh, gọn). Nếu trình duyệt chặn CORS thì
+ * tự chuyển sang JSONP — cách này không bao giờ bị chặn.
+ */
+function api(name, data) {
+  var body = Object.assign({ api: name }, data || {});
+  return fetch(GAS_URL, {
+    method: "POST",
+    body: JSON.stringify(body)   // để text/plain, tránh preflight
+  })
+    .then(function (r) { return r.json(); })
+    .catch(function () { return jsonp(name, data); });
+}
+
+var jsonpSeq = 0;
+function jsonp(name, data) {
+  return new Promise(function (resolve, reject) {
+    var cb = "__cb" + (++jsonpSeq) + "_" + Date.now();
+    var timer = setTimeout(function () { cleanup(); reject(new Error("Hết thời gian chờ máy chủ")); }, 20000);
+
+    function cleanup() {
+      clearTimeout(timer);
+      try { delete window[cb]; } catch (e) { window[cb] = undefined; }
+      if (s.parentNode) s.parentNode.removeChild(s);
+    }
+
+    window[cb] = function (res) { cleanup(); resolve(res); };
+
+    var url = GAS_URL + "?api=" + encodeURIComponent(name) + "&callback=" + cb;
+    if (data) url += "&payload=" + encodeURIComponent(JSON.stringify(data));
+
+    var s = document.createElement("script");
+    s.src = url;
+    s.onerror = function () { cleanup(); reject(new Error("Không gọi được máy chủ")); };
+    document.head.appendChild(s);
+  });
+}
+
 /* ==================== CHẨN ĐOÁN ==================== */
 
 var steps = [];
-
-function push(txt, state) {
-  steps.push({ t: txt, s: state || "run" });
-  render();
-  return steps.length - 1;
-}
-function mark(i, state, txt) {
-  if (steps[i]) { steps[i].s = state; if (txt) steps[i].t = txt; }
-  render();
-}
+function push(txt, state) { steps.push({ t: txt, s: state || "run" }); render(); return steps.length - 1; }
+function mark(i, state, txt) { if (steps[i]) { steps[i].s = state; if (txt) steps[i].t = txt; } render(); }
 function render() {
   if (!DEBUG) return;
   $("diag").classList.remove("hide");
@@ -233,63 +257,50 @@ function render() {
 }
 function stop(hintText) {
   $("spin").classList.add("hide");
-  $("loadTxt").textContent = "Không kết nối được LINE";
+  $("loadTxt").textContent = "Không kết nối được";
   if (hintText) { $("hint").innerHTML = hintText; $("hint").style.display = "block"; }
   render();
 }
 
 var TIMEOUT = setTimeout(function () {
-  push("Quá 15 giây, dừng chờ", "err");
+  push("Quá 20 giây, dừng chờ", "err");
   push("URL: " + location.href, "err");
-  stop("Nếu dòng <b>Trong iframe</b> ở trên là CÓ và <b>isLoggedIn</b> là false, " +
-       "Apps Script không phục vụ được trang LIFF. Cần chuyển trang HTML sang host tĩnh.");
-}, 15000);
+  stop("Kiểm tra lại GAS_URL ở đầu file index.html và quyền deploy của Apps Script.");
+}, 20000);
 
 /* ==================== KHỞI ĐỘNG ==================== */
 
 push("Trang đã tải", "ok");
 push("LIFF SDK: " + (typeof liff !== "undefined" ? "đã nạp" : "KHÔNG NẠP ĐƯỢC"),
      typeof liff !== "undefined" ? "ok" : "err");
-push("google.script.run: " +
-     ((typeof google !== "undefined" && google.script) ? "có" : "KHÔNG CÓ"),
-     (typeof google !== "undefined" && google.script) ? "ok" : "err");
 push("Trong iframe: " + (window.self !== window.top ? "CÓ" : "không"), "ok");
 push("Query: " + (location.search || "(trống)"), "ok");
 
 if (typeof liff === "undefined") {
   clearTimeout(TIMEOUT);
   stop("Không tải được LIFF SDK. Kiểm tra mạng hoặc tường lửa chặn line-scdn.net.");
-} else if (typeof google === "undefined" || !google.script) {
+} else if (GAS_URL.indexOf("DAN_") === 0) {
   clearTimeout(TIMEOUT);
-  stop("Trang không chạy trong Apps Script. Endpoint URL của LIFF phải là URL kết thúc bằng <b>/exec</b>.");
+  push("GAS_URL chưa được điền", "err");
+  stop("Mở index.html, dán URL <b>/exec</b> của Apps Script vào biến <b>GAS_URL</b>.");
 } else {
-  var iCfg = push("Đang gọi getConfig()...");
-  google.script.run
-    .withSuccessHandler(function (cfg) {
-      if (!cfg || !cfg.liffId) {
-        clearTimeout(TIMEOUT);
-        mark(iCfg, "err", "getConfig() trả về rỗng");
-        stop("Hàm getConfig() trong Code.gs không trả về dữ liệu.");
-        return;
-      }
-      if (String(cfg.liffId).indexOf("DAN_") === 0) {
-        clearTimeout(TIMEOUT);
-        mark(iCfg, "err", "LIFF_ID chưa được điền");
-        stop("Mở Code.gs, điền <b>LIFF_ID</b> và <b>LINE_LOGIN_CHANNEL_ID</b>, rồi deploy version mới.");
-        return;
-      }
-      mark(iCfg, "ok", "getConfig() OK — LIFF ID " + cfg.liffId);
+  var iCfg = push("Đang lấy cấu hình từ Apps Script...");
+  api("config")
+    .then(function (cfg) {
+      if (!cfg || !cfg.liffId) throw new Error("Máy chủ trả về dữ liệu rỗng");
+      if (String(cfg.liffId).indexOf("DAN_") === 0) throw new Error("LIFF_ID trong Code.gs chưa điền");
+      mark(iCfg, "ok", "Cấu hình OK — LIFF ID " + cfg.liffId);
       LIFF_ID  = cfg.liffId;
       SHIFTS   = cfg.shifts || [];
       MAX_DAYS = cfg.maxDays || 0;
       initLiff();
     })
-    .withFailureHandler(function (e) {
+    .catch(function (e) {
       clearTimeout(TIMEOUT);
-      mark(iCfg, "err", "getConfig() lỗi: " + (e && e.message ? e.message : String(e)));
-      stop("Thường do quyền deploy. Đặt <b>Who has access = Anyone</b> rồi deploy version mới.");
-    })
-    .getConfig();
+      mark(iCfg, "err", "Lỗi cấu hình: " + e.message);
+      stop("Kiểm tra: GAS_URL đúng chưa, Apps Script deploy với <b>Who has access = Anyone</b> chưa, " +
+           "và đã điền LIFF_ID trong Code.gs chưa.");
+    });
 }
 
 function initLiff() {
@@ -301,15 +312,8 @@ function initLiff() {
       push("isInClient: " + liff.isInClient() + " | isLoggedIn: " + liff.isLoggedIn(), "ok");
 
       if (!liff.isLoggedIn()) {
-        if (window.self !== window.top) {
-          clearTimeout(TIMEOUT);
-          push("Chưa đăng nhập và đang nằm trong iframe", "err");
-          stop("Chuyển hướng đăng nhập bị chặn trong iframe. " +
-               "Hãy mở link từ trong ứng dụng LINE. Nếu vẫn lỗi, cần đưa trang HTML sang host tĩnh.");
-          return null;
-        }
         push("Chưa đăng nhập, đang chuyển sang LINE Login...", "run");
-        liff.login();
+        liff.login({ redirectUri: location.href });
         return null;
       }
 
@@ -318,7 +322,7 @@ function initLiff() {
         clearTimeout(TIMEOUT);
         push("getIDToken() trả về NULL", "err");
         stop("LIFF app thiếu scope <b>openid</b>. Vào LINE Developers > LIFF > Scopes, " +
-             "bật cả <b>profile</b> và <b>openid</b>.");
+             "bật cả <b>profile</b> và <b>openid</b>, rồi mở lại.");
         return null;
       }
       push("getIDToken OK (" + idToken.length + " ký tự)", "ok");
@@ -341,7 +345,7 @@ function initLiff() {
       mark(iInit, "err", "liff lỗi: " + msg);
       if (e && e.code) push("Mã lỗi: " + e.code, "err");
       stop("Thường do LIFF ID sai, hoặc Endpoint URL trong LIFF app không trùng " +
-           "URL /exec của deployment hiện tại.");
+           "địa chỉ GitHub Pages đang mở.");
     });
 }
 
@@ -449,22 +453,21 @@ function submit() {
   $("submit").disabled = true;
   $("submit").textContent = "Đang gửi…";
 
-  google.script.run
-    .withSuccessHandler(function (r) {
+  api("submit", {
+    idToken: idToken,
+    mode: tab,
+    date: $("date").value,
+    shifts: picked,
+    reason: $("reason").value.trim()
+  })
+    .then(function (r) {
       if (r && r.ok) { showDone(r); return; }
       showErr((r && r.error) || "Gửi không thành công.");
       setTab(tab);
     })
-    .withFailureHandler(function (e) {
-      showErr("Lỗi kết nối: " + (e && e.message ? e.message : String(e)));
+    .catch(function (e) {
+      showErr("Lỗi kết nối: " + e.message);
       setTab(tab);
-    })
-    .submitFromLiff({
-      idToken: idToken,
-      mode: tab,
-      date: $("date").value,
-      shifts: picked,
-      reason: $("reason").value.trim()
     });
 }
 
@@ -483,12 +486,11 @@ function showDone(r) {
 
 function loadHistory() {
   if (histLoaded) return;
-  google.script.run
-    .withSuccessHandler(renderHistory)
-    .withFailureHandler(function () {
+  api("history", { idToken: idToken })
+    .then(renderHistory)
+    .catch(function () {
       $("histBody").innerHTML = '<div class="empty">Không tải được dữ liệu.</div>';
-    })
-    .getMyHistory(idToken);
+    });
 }
 
 function renderHistory(r) {
